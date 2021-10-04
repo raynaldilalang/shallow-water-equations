@@ -1,0 +1,24 @@
+.uploader:hover {
+  cursor:pointer
+}
+
+.uploader:active {
+  cursor:pointer
+}
+
+.uploader[aria-disabled=true] {
+  cursor:default
+}
+
+.uploader{
+  width: 100%;
+  height: 80px;
+  line-height: 80px;
+  border-width: 1px;
+  border-style: dashed;
+  border-radius: 5px;
+  text-align: center;
+  font-size: large;
+  margin-top: 30px;
+  margin-bottom: 30px;
+}
