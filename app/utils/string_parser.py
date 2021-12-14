@@ -74,7 +74,10 @@ class NumericStringParser:
         self.comp_neq = {"<": operator.lt,
                          ">": operator.gt,
                          "!=": operator.ne}
-        self.fn = {"sin": np.sin,
+        self.fn = {"sinh": np.sinh,
+                   "cosh": np.cosh,
+                   "tanh": np.tanh,
+                   "sin": np.sin,
                    "cos": np.cos,
                    "tan": np.tan,
                    "exp": np.exp,

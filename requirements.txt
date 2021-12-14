@@ -1,0 +1,14 @@
+numpy==1.21.2
+pandas==1.3.4
+scipy==1.7.1
+matplotlib==3.5.0
+plotly==5.4.0
+dash==2.0.0
+dash-bootstrap-components==1.0.1
+dash-core-components==2.0.0
+dash-extensions==0.0.65
+dash-html-components==2.0.0
+dash-table==5.0.0
+tqdm==4.62.3
+pyswarm==0.6
+python-dotenv==0.19.2

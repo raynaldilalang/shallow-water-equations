@@ -6,4 +6,4 @@ from ..components import sensor_point
 layout = html.Div([
     html.H4(['Sensor Point']),
     sensor_point.form,
-], id="sensor-point")
+], id="sensor-point-layout")

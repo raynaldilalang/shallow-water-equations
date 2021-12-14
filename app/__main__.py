@@ -1,7 +1,6 @@
 from dash import html
 from dash import dcc
 from dash.dependencies import Input, Output
-from dash_extensions.callback import DashCallbackBlueprint
 
 from .app import app
 from . import index
