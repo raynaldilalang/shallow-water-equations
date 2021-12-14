@@ -17,6 +17,7 @@ import json
 from swe import bottom
 
 from .app import app
+# from .app import dcb
 from .layouts import initial_conditions, boundary_conditions, upload_bathymetry, sensor_point
 from . import Bathymetry1D, Bathymetry2D, model, save_video1D, save_video2D, g, interpolate_depth1D, interpolate_depth2D, interpolate_input_wave
 from .utils.string_parser import parse_formula
@@ -69,12 +70,24 @@ layout = html.Div([
         html.Hr(),
         sensor_point.layout,
         html.Hr(),
-        button_run,
         download_data_button,
         html.Div(id="info", className="mt-3"),
+        button_run,
+        dcc.Store(id="interval-dummy-store"),
+        dcc.Interval(id="interval-cleaning", interval=6e+3)
     ], id="page-container", style={"marginTop": "30px", "marginBottom": "30px"})
 ])
 
+
+@app.callback(
+    Output("interval-dummy-store", "data"),
+    Input("interval-cleaning", "n_intervals"),
+)
+def clean_temp_data(_):
+    for temp_file in os.listdir('./temp'):
+        if time.time() - os.path.getmtime('./temp/' + temp_file) > 3600:
+            os.remove('./temp/' + temp_file)
+    return ""
 
 @app.callback(
     Output("y-min", "disabled"),
@@ -267,118 +280,129 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, dt_auto,
             left_bc, right_bc, top_bc, bottom_bc,
             advection, store):
 
-    store_dict = json.loads(store)
+    try:
+        store_dict = json.loads(store)
 
-    if dimension == '2D':
-        dx, dy = store_dict['dx'], store_dict['dy']
+        if dimension == '2D':
+            dx, dy = store_dict['dx'], store_dict['dy']
 
-        # bottom profile
-        if not len(create_bathymetry):
-            df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
-            x, y, d = interpolate_depth2D(df_bathymetry, dx=dx, dy=dy)
-        else:
-            x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
-            y = np.arange(store_dict['y_min'], store_dict['y_max'], dy)
-            X, Y = np.meshgrid(x, y)
-            X, Y = X.T, Y.T
-            d = parse_formula({'x': X, 'y': Y, 'pi': np.pi,
-                            'Pi': np.pi}, store_dict['d'])
-            if not isinstance(d, np.ndarray):
-                d = d * np.ones(X.shape)
-        bathymetry = Bathymetry2D(x, y, d)
-
-        # initial conditions
-        eta_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
-                                'Pi': np.pi}, eta_initial)
-        u_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
-                                'Pi': np.pi}, u_initial)
-        ic = {'eta': eta_initial, 'u': u_initial}
-
-        # boundary conditions
-        H = d.max()
-        c = np.sqrt(g * H)
-        if len(dt_auto):
-            dt = 0.5 / (c * np.sqrt(1/dx**2 + 1/dy**2))
-        else:
-            dt = store_dict['dt']
-        bc = {}
-        for bound in ['left', 'right', 'top', 'bottom']:
-            if store_dict[bound + '_contents']:
-                bc[bound] = parse_contents(store_dict[bound + '_contents'])
-                t, bc[bound] = interpolate_input_wave(bc[bound], bc[bound], dt)
+            # bottom profile
+            if not len(create_bathymetry):
+                df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
+                x, y, d = interpolate_depth2D(df_bathymetry, dx=dx, dy=dy)
             else:
-                t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
-                bc[bound] = parse_formula({'t': t, 'pi': np.pi,
-                                           'Pi': np.pi}, store_dict[bound + '_formula'])
-        
-        i0 = 1 if left_bc == 'eta' else 0
-        i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
-        j0 = 1 if top_bc == 'eta' else 0
-        j1 = y.shape[0] - 1 if bottom_bc == 'eta' else y.shape[0]
+                x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
+                y = np.arange(store_dict['y_min'], store_dict['y_max'], dy)
+                X, Y = np.meshgrid(x, y)
+                X, Y = X.T, Y.T
+                d = parse_formula({'x': X, 'y': Y, 'pi': np.pi,
+                                'Pi': np.pi}, store_dict['d'])
+                if not isinstance(d, np.ndarray):
+                    d = d * np.ones(X.shape)
+            bathymetry = Bathymetry2D(x, y, d)
 
-        start = time.time()
-        E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, advection=advection, verbose=1)
-        x0, y0 = store_dict['x0'], store_dict['y0']
-        x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
-        df = pd.DataFrame({'t': t, 'eta': E[x0_idx, y0_idx, :]})
-        temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
-        save_video2D(temp_file, bathymetry, E, dt=dt, fps=1)
-        end = time.time()
-        return f'SWE finished in {end - start} s', df.to_json(), None, None, dcc.send_file(temp_file)
-    
-    if dimension == '1D':
-        dx = store_dict['dx']
+            # initial conditions
+            eta_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
+                                    'Pi': np.pi}, eta_initial)
+            u_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
+                                    'Pi': np.pi}, u_initial)
+            ic = {'eta': eta_initial, 'u': u_initial}
 
-        # bottom profile
-        if not len(create_bathymetry):
-            df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
-            x, d = interpolate_depth1D(df_bathymetry, dx=dx)
-        else:
-            x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
-            d = parse_formula({'x': x, 'pi': np.pi,
-                            'Pi': np.pi}, store_dict['d'])
-            if not isinstance(d, np.ndarray):
-                d = d * np.ones(x.shape)
-
-        bathymetry = Bathymetry1D(x, d)
-        
-        # initial conditions
-        eta_initial = parse_formula({'x': x, 'pi': np.pi,
-                                'Pi': np.pi}, eta_initial)
-        u_initial = parse_formula({'x': x, 'pi': np.pi,
-                                'Pi': np.pi}, u_initial)
-        ic = {'eta': eta_initial, 'u': u_initial}
-
-        # boundary conditions
-        H = d.max()
-        c = np.sqrt(g * H)
-        if len(dt_auto):
-            dt = 0.5 / (c / dx)
-        else:
-            dt = store_dict['dt']
-        
-        bc = {}
-        for bound in ['left', 'right']:
-            if store_dict[bound + '_contents']:
-                bc[bound] = parse_contents(store_dict[bound + '_contents'])
-                t, bc[bound] = interpolate_input_wave(bc[bound], bc[bound], dt)
+            # boundary conditions
+            H = d.max()
+            c = np.sqrt(g * H)
+            if len(dt_auto):
+                dt = 0.5 / (c * np.sqrt(1/dx**2 + 1/dy**2))
             else:
-                t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
-                bc[bound] = parse_formula({'t': t, 'pi': np.pi,
-                                           'Pi': np.pi}, store_dict[bound + '_formula'])
-        
-        i0 = 1 if left_bc == 'eta' else 0
-        i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
+                dt = store_dict['dt']
+            bc = {}
+            for bound in ['left', 'right', 'top', 'bottom']:
+                if store_dict[bound + '_contents']:
+                    bc[bound] = parse_contents(store_dict[bound + '_contents'])
+                    t, bc[bound] = interpolate_input_wave(bc[bound], bc[bound], dt)
+                else:
+                    t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
+                    bc[bound] = parse_formula({'t': t, 'pi': np.pi,
+                                            'Pi': np.pi}, store_dict[bound + '_formula'])
+            
+            i0 = 1 if left_bc == 'eta' else 0
+            i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
+            j0 = 1 if top_bc == 'eta' else 0
+            j1 = y.shape[0] - 1 if bottom_bc == 'eta' else y.shape[0]
 
-        start = time.time()
-        E, _ = model.swe1D(bathymetry, t, ic, bc, i0, i1, advection=advection, verbose=1)
-        x0 = store_dict['x0']
-        x0_idx = np.argmin(np.abs(x - x0))
-        df = pd.DataFrame({'t': t, 'eta': E[x0_idx, :]})
-        temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
-        save_video1D(temp_file, bathymetry, E, dt=dt, fps=1)
-        end = time.time()
-        return f'SWE finished in {end - start} s', df.to_json(), None, None, dcc.send_file(temp_file)
+            start = time.time()
+            E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, advection=advection, verbose=1)
+            x0, y0 = store_dict['x0'], store_dict['y0']
+            x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
+            df = pd.DataFrame({'t': t, 'eta': E[x0_idx, y0_idx, :]})
+            temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
+            save_video2D(temp_file, bathymetry, E, dt=dt, fps=1)
+            end = time.time()
+            return f'SWE finished in {end - start} s', df.to_json(), None, None, dcc.send_file(temp_file)
+        
+        if dimension == '1D':
+            dx = store_dict['dx']
+
+            # bottom profile
+            if not len(create_bathymetry):
+                df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
+                x, d = interpolate_depth1D(df_bathymetry, dx=dx)
+            else:
+                x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
+                d = parse_formula({'x': x, 'pi': np.pi,
+                                'Pi': np.pi}, store_dict['d'])
+                if not isinstance(d, np.ndarray):
+                    d = d * np.ones(x.shape)
+
+            bathymetry = Bathymetry1D(x, d)
+            
+            # initial conditions
+            eta_initial = parse_formula({'x': x, 'pi': np.pi,
+                                    'Pi': np.pi}, eta_initial)
+            u_initial = parse_formula({'x': x, 'pi': np.pi,
+                                    'Pi': np.pi}, u_initial)
+            ic = {'eta': eta_initial, 'u': u_initial}
+
+            # boundary conditions
+            H = d.max()
+            c = np.sqrt(g * H)
+            if len(dt_auto):
+                dt = 0.5 / (c / dx)
+            else:
+                dt = store_dict['dt']
+            
+            bc = {}
+            for bound in ['left', 'right']:
+                if store_dict[bound + '_contents']:
+                    bc[bound] = parse_contents(store_dict[bound + '_contents'])
+                    t, bc[bound] = interpolate_input_wave(bc[bound], bc[bound], dt)
+                else:
+                    t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
+                    bc[bound] = parse_formula({'t': t, 'pi': np.pi,
+                                            'Pi': np.pi}, store_dict[bound + '_formula'])
+            
+            i0 = 1 if left_bc == 'eta' else 0
+            i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
+
+            start = time.time()
+            E, _ = model.swe1D(bathymetry, t, ic, bc, i0, i1, advection=advection, verbose=1)
+            x0 = store_dict['x0']
+            x0_idx = np.argmin(np.abs(x - x0))
+            df = pd.DataFrame({'t': t, 'eta': E[x0_idx, :]})
+            temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
+            save_video1D(temp_file, bathymetry, E, dt=dt, fps=1)
+            store_dict['temp_file'] = temp_file
+            end = time.time()
+            return (f'SWE finished in {end - start} s',
+                df.to_json(), None, None, dcc.send_file(temp_file))
+    except:
+        time.sleep(10)
+        return (
+            dbc.Alert(
+                'Something went wrong when processing your request. Please check your configurations and try refreshing this page.',
+                color='danger',
+            ), "", None, {"display": "none"}, None
+        )
 
 
 @app.callback(
