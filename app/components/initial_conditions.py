@@ -15,7 +15,7 @@ form = html.Div([
     dbc.Row([
         dbc.Col(
             dbc.FormGroup([
-                dbc.Label(html.I([eta + "(x, y, 0)"]), id="eta-initial-label", html_for="eta-initial"),
+                dbc.Label(html.I([eta + "(x, y, t", html.Sub("min"), ")"]), id="eta-initial-label", html_for="eta-initial"),
                 dbc.Input(
                     id="eta-initial",
                 ),
@@ -23,7 +23,7 @@ form = html.Div([
         ),
         dbc.Col(
             dbc.FormGroup([
-                dbc.Label(html.I(["u(x, y, 0)"]), id="u-initial-label", html_for="u-initial"),
+                dbc.Label(html.I(["u(x, y, t", html.Sub("min"), ")"]), id="u-initial-label", html_for="u-initial"),
                 dbc.Input(
                     id="u-initial",
                 ),

@@ -117,6 +117,8 @@ def clean_temp_data(_):
     Output("u-initial-label", "children"),
     Output("left-radio", "options"),
     Output("right-radio", "options"),
+    Output("top-radio", "options"),
+    Output("bottom-radio", "options"),
     Input("dimension-dropdown", "value"),
 )
 def disable_y(dimension):
@@ -124,17 +126,21 @@ def disable_y(dimension):
         return (
             True, True, True, True, True, True, True, True,
             "x/10", html.I("d(x)"),
-            html.I([eta + "(x, 0)"]), html.I(["u(x, 0)"]),
-            [{'label': eta + "(0, t)", 'value': 'eta'}, {'label': "u(0, t)", 'value': 'u'}],
-            [{'label': eta + "(L, t)", 'value': 'eta'}, {'label': "u(L, t)", 'value': 'u'}],
+            html.I([eta + "(x, t", html.Sub("min"), ")"]), html.I(["u(x, t", html.Sub("min"), ")"]),
+            [{'label': eta + u"(x\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, t)", 'value': 'u'}],
+            [{'label': eta + u"(x\u2098\u2090\u2093, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2090\u2093, t)", 'value': 'u'}],
+            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta', 'disabled': True}, {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u', 'disabled': True}],
+            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta', 'disabled': True}, {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u', 'disabled': True}],
         )
     if dimension == '2D':
         return (
             False, False, False, False, False, False, False, False,
             "(x+y)/10", html.I("d(x, y)"),
-            html.I([eta + "(x, y, 0)"]), html.I(["u(x, y, 0)"]),
-            [{'label': eta + "(0, y, t)", 'value': 'eta'}, {'label': "u(0, y, t)", 'value': 'u'}],
-            [{'label': eta + "(Lx, y, t)", 'value': 'eta'}, {'label': "u(Lx, y, t)", 'value': 'u'}],
+            html.I([eta + "(x, y, t", html.Sub("min"), ")"]), html.I(["u(x, y, t", html.Sub("min"), ")"]),
+            [{'label': eta + u"(x\u2098\u2097\u2099, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, y, t)", 'value': 'u'}],
+            [{'label': eta + u"(x\u2098\u2090\u2093, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2090\u2093, y, t)", 'value': 'u'}],
+            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u'}],
+            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta'}, {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u'}],
         )
 
 

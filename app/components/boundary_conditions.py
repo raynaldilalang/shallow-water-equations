@@ -55,10 +55,10 @@ form = html.Div([
             dbc.FormGroup([
                 dbc.RadioItems(
                     options=[
-                        {'label': eta + "(0, y, t)", 'value': 'eta'},
-                        {'label': "u(0, y, t)", 'value': 'u'},
+                        {'label': eta + u"(x\u2098\u2097\u2099, y, t)", 'value': 'eta'},
+                        {'label': u"u(x\u2098\u2097\u2099, y, t)", 'value': 'u'},
                     ],
-                    value='eta',
+                    value='u',
                     id="left-radio",
                     inline=True,
                 ),
@@ -79,10 +79,10 @@ form = html.Div([
             dbc.FormGroup([
                 dbc.RadioItems(
                     options=[
-                        {'label': eta + "(Lx, y, t)", 'value': 'eta'},
-                        {'label': "u(Lx, y, t)", 'value': 'u'},
+                        {'label': eta + u"(x\u2098\u2090\u2093, y, t)", 'value': 'eta'},
+                        {'label': u"u(x\u2098\u2090\u2093, y, t)", 'value': 'u'},
                     ],
-                    value='eta',
+                    value='u',
                     id="right-radio",
                     inline=True,
                 ),
@@ -103,10 +103,10 @@ form = html.Div([
             dbc.FormGroup([
                 dbc.RadioItems(
                     options=[
-                        {'label': eta + "(x, 0, t)", 'value': 'eta'},
-                        {'label': "u(x, 0, t)", 'value': 'u'},
+                        {'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta'},
+                        {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u'},
                     ],
-                    value='eta',
+                    value='u',
                     id="top-radio",
                     inline=True,
                 ),
@@ -127,10 +127,10 @@ form = html.Div([
             dbc.FormGroup([
                 dbc.RadioItems(
                     options=[
-                        {'label': eta + "(x, Ly, t)", 'value': 'eta'},
-                        {'label': "u(x, Ly, t)", 'value': 'u'},
+                        {'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta'},
+                        {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u'},
                     ],
-                    value='eta',
+                    value='u',
                     id="bottom-radio",
                     inline=True,
                 ),
