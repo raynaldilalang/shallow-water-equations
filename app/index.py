@@ -78,6 +78,19 @@ layout = html.Div([
     ], id="page-container", style={"marginTop": "30px", "marginBottom": "30px"})
 ])
 
+app.layout = html.Div([
+    dcc.Location(id="url", refresh=False),
+    html.Div(id="page-content")
+])
+
+
+@app.callback(Output("page-content", "children"),
+              Input("url", "pathname"))
+def display_page(pathname):
+    if pathname == "/":
+        return layout
+    else:
+        return "404"
 
 @app.callback(
     Output("interval-dummy-store", "data"),
