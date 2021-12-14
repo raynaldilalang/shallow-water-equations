@@ -12,3 +12,4 @@ dash-table==5.0.0
 tqdm==4.62.3
 # pyswarm==0.6
 python-dotenv==0.19.2
+gunicorn==20.1.0

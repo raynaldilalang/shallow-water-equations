@@ -24,6 +24,8 @@ from .utils.string_parser import parse_formula
 from .utils.utils import parse_contents
 from .utils.characters import Delta, eta
 
+server = app.server
+
 navbar = dbc.NavbarSimple(
     children=[],
     brand="Shallow Water Equations",
