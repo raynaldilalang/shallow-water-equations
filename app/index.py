@@ -408,7 +408,8 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, dt_auto,
             end = time.time()
             return (f'SWE finished in {end - start} s',
                 df.to_json(), None, None, dcc.send_file(temp_file))
-    except:
+    except Exception as e:
+        print(e)
         time.sleep(10)
         return (
             dbc.Alert(
