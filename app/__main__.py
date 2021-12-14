@@ -15,8 +15,8 @@ parser.add_argument("--reload", action='store_true',
                     default=False, help="Run with reload")
 
 
-HOST = os.getenv('HOST')
-PORT = int(os.getenv('PORT'))
+HOST = os.getenv('HOST', '0.0.0.0')
+PORT = int(os.getenv('PORT', '80'))
 
 if __name__ == "__main__":
     args = parser.parse_args()
