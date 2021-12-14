@@ -20,4 +20,6 @@ PORT = int(os.getenv('PORT', '80'))
 
 if __name__ == "__main__":
     args = parser.parse_args()
+    if 'temp' not in os.listdir():
+        os.mkdir('temp')
     app.run_server(host=HOST, port=PORT, debug=args.debug, use_reloader=args.reload)
