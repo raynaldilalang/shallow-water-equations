@@ -70,7 +70,12 @@ form = html.Div([
                     id="left-upload-input",
                     multiple=False,
                     accept=".csv"
-                )
+                ),
+                dcc.Checklist(
+                    id="left-input-absorbing",
+                    options=[{'label': 'Absorbing', 'value': 1}],
+                    value=[]
+                ),
             ]), width=4,
         ),
     ], form=True),
@@ -94,7 +99,12 @@ form = html.Div([
                     id="right-upload-input",
                     multiple=False,
                     accept=".csv"
-                )
+                ),
+                dcc.Checklist(
+                    id="right-input-absorbing",
+                    options=[{'label': 'Absorbing', 'value': 1}],
+                    value=[]
+                ),
             ]), width=4,
         )
     ], form=True),
@@ -118,7 +128,12 @@ form = html.Div([
                     id="top-upload-input",
                     multiple=False,
                     accept=".csv"
-                )
+                ),
+                dcc.Checklist(
+                    id="top-input-absorbing",
+                    options=[{'label': 'Absorbing', 'value': 1}],
+                    value=[]
+                ),
             ]), width=4,
         )
     ], form=True),
@@ -142,7 +157,12 @@ form = html.Div([
                     id="bottom-upload-input",
                     multiple=False,
                     accept=".csv"
-                )
+                ),
+                dcc.Checklist(
+                    id="bottom-input-absorbing",
+                    options=[{'label': 'Absorbing', 'value': 1}],
+                    value=[]
+                ),
             ]), width=4,
         )
     ], form=True),
@@ -155,3 +175,17 @@ form = html.Div([
 )
 def disable_dt_field(auto):
     return len(auto) > 0
+
+# @app.callback(
+#     Output("left-input", "disabled"),
+#     Output("right-input", "disabled"),
+#     Output("top-input", "disabled"),
+#     Output("bottom-input", "disabled"),
+#     Input("left-input-absorbing", "value"),
+#     Input("right-input-absorbing", "value"),
+#     Input("top-input-absorbing", "value"),
+#     Input("bottom-input-absorbing", "value"),
+# )
+# def disable_input(left, right, top, bottom):
+#     print(left, right, top, bottom)
+#     return len(left)>0, len(right)>0, len(top)>0, len(bottom)>0

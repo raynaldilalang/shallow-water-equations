@@ -110,6 +110,8 @@ def clean_temp_data(_):
     Output("dy", "disabled"),
     Output("v-initial", "disabled"),
     Output("y0", "disabled"),
+    Output("left-input", "disabled"),
+    Output("right-input", "disabled"),
     Output("top-input", "disabled"),
     Output("bottom-input", "disabled"),
     Output("top-upload-input", "disabled"),
@@ -123,11 +125,17 @@ def clean_temp_data(_):
     Output("top-radio", "options"),
     Output("bottom-radio", "options"),
     Input("dimension-dropdown", "value"),
+    Input("left-input-absorbing", "value"),
+    Input("right-input-absorbing", "value"),
+    Input("top-input-absorbing", "value"),
+    Input("bottom-input-absorbing", "value"),
 )
-def disable_y(dimension):
+def disable_y(dimension, left, right, top, bottom):
+    left, right, top, bottom = len(left)>0, len(right)>0, len(top)>0, len(bottom)>0
     if dimension == '1D':
+        top, bottom = True, True
         return (
-            True, True, True, True, True, True, True, True, True,
+            True, True, True, True, True, left, right, top, bottom, True, True,
             "x/10", html.I("d(x)"),
             html.I([eta + "(x, t", html.Sub("min"), ")"]), html.I(["u(x, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, t)", 'value': 'u'}],
@@ -137,7 +145,7 @@ def disable_y(dimension):
         )
     if dimension == '2D':
         return (
-            False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, left, right, top, bottom, False, False,
             "(x+y)/10", html.I("d(x, y)"),
             html.I([eta + "(x, y, t", html.Sub("min"), ")"]), html.I(["u(x, y, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, y, t)", 'value': 'u'}],
