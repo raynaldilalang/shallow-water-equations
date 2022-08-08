@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import animation
 
-def save_video1D(file, bathymetry, E, dt=1, fps=1, n_frames=None):
+def save_video1D(file, bathymetry, E, dt=1, fps=12, n_frames=None):
     x, d = bathymetry.x, bathymetry.d
     zmin = -np.abs(d).max()
     zmax = -zmin

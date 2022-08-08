@@ -86,7 +86,8 @@ class NumericStringParser:
                    "abs": np.abs,
                    "floor": np.floor,
                    "ceil": np.ceil,
-                   "sgn": np.sign}
+                   "sign": np.sign,
+                   "H": np.heaviside}
 
     def pushFirst(self, strg, loc, toks):
         self.exprStack.append(toks[0])

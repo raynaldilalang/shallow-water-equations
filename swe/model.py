@@ -118,8 +118,9 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
     hy = np.zeros((Nx, Ny + 1))
 
     # initial conditions
-    e[:, :, 0] = initial_condition['eta']
-    u[:, :, 0] = initial_condition['u']
+    e[:, :, 0] = initial_condition['eta'] if 'eta' in initial_condition else 0
+    u[:, :, 0] = initial_condition['u'] if 'u' in initial_condition else 0
+    v[:, :, 0] = initial_condition['v'] if 'v' in initial_condition else 0
 
     # boundary conditions
     if i0 == 0:
@@ -135,14 +136,14 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
         e[-1, :, :] = boundary_condition['right']
         e[-1, :, :] = boundary_condition['right']
     if j0 == 0:
-        u[:, 0, :] = boundary_condition['top']
-        u[:, 0, :] = boundary_condition['top']
+        v[:, 0, :] = boundary_condition['top']
+        v[:, 0, :] = boundary_condition['top']
     else:
         e[:, 0, :] = boundary_condition['top']
         e[:, 0, :] = boundary_condition['top']
     if j1 == Ny:
-        u[:, -1, :] = boundary_condition['bottom']
-        u[:, -1, :] = boundary_condition['bottom']
+        v[:, -1, :] = boundary_condition['bottom']
+        v[:, -1, :] = boundary_condition['bottom']
     else:
         e[:, -1, :] = boundary_condition['bottom']
         e[:, -1, :] = boundary_condition['bottom']

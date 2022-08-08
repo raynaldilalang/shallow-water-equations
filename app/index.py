@@ -108,6 +108,7 @@ def clean_temp_data(_):
     Output("y-min", "disabled"),
     Output("y-max", "disabled"),
     Output("dy", "disabled"),
+    Output("v-initial", "disabled"),
     Output("y0", "disabled"),
     Output("top-input", "disabled"),
     Output("bottom-input", "disabled"),
@@ -126,23 +127,23 @@ def clean_temp_data(_):
 def disable_y(dimension):
     if dimension == '1D':
         return (
-            True, True, True, True, True, True, True, True,
+            True, True, True, True, True, True, True, True, True,
             "x/10", html.I("d(x)"),
             html.I([eta + "(x, t", html.Sub("min"), ")"]), html.I(["u(x, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, t)", 'value': 'u'}],
             [{'label': eta + u"(x\u2098\u2090\u2093, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2090\u2093, t)", 'value': 'u'}],
-            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta', 'disabled': True}, {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u', 'disabled': True}],
-            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta', 'disabled': True}, {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u', 'disabled': True}],
+            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta', 'disabled': True}, {'label': u"v(x, y\u2098\u2097\u2099, t)", 'value': 'v', 'disabled': True}],
+            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta', 'disabled': True}, {'label': u"v(x, y\u2098\u2090\u2093, t)", 'value': 'v', 'disabled': True}],
         )
     if dimension == '2D':
         return (
-            False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False,
             "(x+y)/10", html.I("d(x, y)"),
             html.I([eta + "(x, y, t", html.Sub("min"), ")"]), html.I(["u(x, y, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, y, t)", 'value': 'u'}],
             [{'label': eta + u"(x\u2098\u2090\u2093, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2090\u2093, y, t)", 'value': 'u'}],
-            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u'}],
-            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta'}, {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u'}],
+            [{'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"v(x, y\u2098\u2097\u2099, t)", 'value': 'v'}],
+            [{'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta'}, {'label': u"v(x, y\u2098\u2090\u2093, t)", 'value': 'v'}],
         )
 
 
@@ -288,6 +289,7 @@ def trigger_store_hide_gray(a):
     State("dimension-dropdown", "value"),
     State("eta-initial", "value"),
     State("u-initial", "value"),
+    State("v-initial", "value"),
     State("dt-auto", "value"),
     State("left-radio", "value"),
     State("right-radio", "value"),
@@ -297,8 +299,8 @@ def trigger_store_hide_gray(a):
     State("store", "data"),
     prevent_initial_call=True
 )
-def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, dt_auto,
-            left_bc, right_bc, top_bc, bottom_bc,
+def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
+            dt_auto, left_bc, right_bc, top_bc, bottom_bc,
             advection, store):
 
     try:
@@ -327,7 +329,9 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, dt_auto,
                                     'Pi': np.pi}, eta_initial)
             u_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
                                     'Pi': np.pi}, u_initial)
-            ic = {'eta': eta_initial, 'u': u_initial}
+            v_initial = parse_formula({'x': bathymetry.X, 'y': bathymetry.Y, 'pi': np.pi,
+                                    'Pi': np.pi}, v_initial)
+            ic = {'eta': eta_initial, 'u': u_initial, 'v': v_initial}
 
             # boundary conditions
             H = d.max()

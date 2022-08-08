@@ -29,6 +29,14 @@ form = html.Div([
                 ),
             ]), width=4,
         ),
+        dbc.Col(
+            dbc.FormGroup([
+                dbc.Label(html.I(["v(x, y, t", html.Sub("min"), ")"]), id="v-initial-label", html_for="v-initial"),
+                dbc.Input(
+                    id="v-initial",
+                ),
+            ]), width=4,
+        ),
     ], form=True),
 ], id="form-ic",)
 

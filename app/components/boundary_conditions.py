@@ -104,9 +104,9 @@ form = html.Div([
                 dbc.RadioItems(
                     options=[
                         {'label': eta + u"(x, y\u2098\u2097\u2099, t)", 'value': 'eta'},
-                        {'label': u"u(x, y\u2098\u2097\u2099, t)", 'value': 'u'},
+                        {'label': u"v(x, y\u2098\u2097\u2099, t)", 'value': 'v'},
                     ],
-                    value='u',
+                    value='v',
                     id="top-radio",
                     inline=True,
                 ),
@@ -128,9 +128,9 @@ form = html.Div([
                 dbc.RadioItems(
                     options=[
                         {'label': eta + u"(x, y\u2098\u2090\u2093, t)", 'value': 'eta'},
-                        {'label': u"u(x, y\u2098\u2090\u2093, t)", 'value': 'u'},
+                        {'label': u"v(x, y\u2098\u2090\u2093, t)", 'value': 'v'},
                     ],
-                    value='u',
+                    value='v',
                     id="bottom-radio",
                     inline=True,
                 ),
