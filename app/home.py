@@ -39,7 +39,7 @@ layout = html.Div([
                 className="lead",
             ),
             html.Hr(className="my-2"),
-            dcc.Link("How do I use the app?", href="learn_more"),
+            html.A("How do I use the app?", href="https://docs.google.com/document/d/1Qa7-yTlSSJiiIxOvZ9a6pWv5d-zs8ZZrxmmzYkMw7pk/edit?usp=sharing", target="_blank"),
             html.P(
                 dbc.Button("Start", href="/main_app", color="primary"), className="lead"
             ),

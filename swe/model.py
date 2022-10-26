@@ -122,7 +122,6 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
     u[:, :, 0] = initial_condition['u'] if 'u' in initial_condition else 0
     v[:, :, 0] = initial_condition['v'] if 'v' in initial_condition else 0
 
-    print('YE1')
     # boundary conditions
     if i0 == 0:
         u[0, :, :] = boundary_condition['left']
@@ -148,7 +147,6 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
     else:
         e[:, -1, :] = boundary_condition['bottom']
         e[:, -1, :] = boundary_condition['bottom']
-    print('YE2')
 
     loop = range(Nt - 1)
     if verbose == 1:

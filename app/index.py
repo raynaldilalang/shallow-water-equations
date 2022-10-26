@@ -313,7 +313,6 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             j1 = y.shape[0] - 1 if bottom_bc == 'eta' else y.shape[0]
 
             start = time.time()
-            print(bc['left'].shape, t.shape)
             E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, advection=advection, verbose=1)
             x0, y0 = store_dict['x0'], store_dict['y0']
             x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
