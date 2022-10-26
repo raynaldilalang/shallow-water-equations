@@ -36,7 +36,11 @@ def interpolate_depth2D(df_bottom, dx, dy):
     return x, y, d
 
 
-def interpolate_input_wave(df_input_wave, dt):
+def interpolate_input_wave(df_input_wave, dt, t_min=None, t_max=None):
+    if t_min is not None:
+        df_input_wave = df_input_wave[df_input_wave.iloc[:, 0] >= t_min].reset_index(drop=True)
+    if t_max is not None:
+        df_input_wave = df_input_wave[df_input_wave.iloc[:, 0] <= t_max].reset_index(drop=True)
     input_wave_func = interpolate.interp1d(df_input_wave.iloc[:, 0], df_input_wave.iloc[:, 1])
     t = np.arange(df_input_wave.iloc[:, 0].min(), df_input_wave.iloc[:, 0].max(), dt)
     input_wave = input_wave_func(t)

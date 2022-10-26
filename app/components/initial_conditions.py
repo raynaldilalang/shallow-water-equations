@@ -19,6 +19,12 @@ form = html.Div([
                 dbc.Input(
                     id="eta-initial",
                 ),
+                dcc.Upload(
+                    dbc.Button("Upload", id="eta-initial-upload-button", color="light"),
+                    id="eta-initial-upload-input",
+                    multiple=False,
+                    accept=".csv"
+                ),
             ]), width=4,
         ),
         dbc.Col(
@@ -27,6 +33,12 @@ form = html.Div([
                 dbc.Input(
                     id="u-initial",
                 ),
+                dcc.Upload(
+                    dbc.Button("Upload", id="u-initial-upload-button", color="light"),
+                    id="u-initial-upload-input",
+                    multiple=False,
+                    accept=".csv"
+                ),
             ]), width=4,
         ),
         dbc.Col(
@@ -34,6 +46,12 @@ form = html.Div([
                 dbc.Label(html.I(["v(x, y, t", html.Sub("min"), ")"]), id="v-initial-label", html_for="v-initial"),
                 dbc.Input(
                     id="v-initial",
+                ),
+                dcc.Upload(
+                    dbc.Button("Upload", id="v-initial-upload-button", color="light"),
+                    id="v-initial-upload-input",
+                    multiple=False,
+                    accept=".csv"
                 ),
             ]), width=4,
         ),
