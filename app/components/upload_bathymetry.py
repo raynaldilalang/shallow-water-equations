@@ -23,8 +23,8 @@ input_bathymetry = dcc.Upload(
 )
 
 create_new = dcc.Checklist(
-    id="create-new-bathymetry",
-    options=[{'label': 'Create new bathymetry', 'value': 1}],
+    id="create-bathymetry-formula",
+    options=[{'label': 'Formulate bathymetry', 'value': 1}],
     value=[]
 )
 
@@ -119,7 +119,7 @@ form = html.Div([
 @app.callback(
     Output("form-bathymetry", "style"),
     Output("upload-bathymetry", "disabled"),
-    Input("create-new-bathymetry", "value")
+    Input("create-bathymetry-formula", "value")
 )
 def show_form(create_new_value):
     if len(create_new_value):

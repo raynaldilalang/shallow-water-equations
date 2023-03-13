@@ -24,7 +24,7 @@ server = app.server
 navbar = dbc.NavbarSimple(
     children=[],
     brand="Shallow Water Equations",
-    brand_href="#",
+    brand_href="/",
     color="dark",
     dark=True,
 )

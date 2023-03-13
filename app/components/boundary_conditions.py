@@ -62,14 +62,28 @@ form = html.Div([
                     id="left-radio",
                     inline=True,
                 ),
-                dbc.Input(
-                    id="left-input",
-                ),
+                # dcc.Upload(
+                #     dbc.Button("Upload", id="left-upload", color="light"),
+                #     id="left-upload-input",
+                #     multiple=False,
+                #     accept=".csv"
+                # ),
                 dcc.Upload(
-                    dbc.Button("Upload", id="left-upload", color="light"),
                     id="left-upload-input",
+                    className="uploader-mini",
+                    children=html.A(html.Div([
+                        "Upload left boundary condition"
+                    ])),
                     multiple=False,
                     accept=".csv"
+                ),
+                dcc.Checklist(
+                    id="create-left-bc-formula",
+                    options=[{'label': 'Formulate left boundary condition', 'value': 1}],
+                    value=[]
+                ),
+                dbc.Input(
+                    id="left-input",
                 ),
                 dcc.Checklist(
                     id="left-input-absorbing",
@@ -78,8 +92,7 @@ form = html.Div([
                 ),
             ]), width=4,
         ),
-    ], form=True),
-    dbc.Row([
+        dbc.Col(width=1),
         dbc.Col(
             dbc.FormGroup([
                 dbc.RadioItems(
@@ -91,14 +104,28 @@ form = html.Div([
                     id="right-radio",
                     inline=True,
                 ),
-                dbc.Input(
-                    id="right-input",
-                ),
+                # dcc.Upload(
+                #     dbc.Button("Upload", id="right-upload", color="light"),
+                #     id="right-upload-input",
+                #     multiple=False,
+                #     accept=".csv"
+                # ),
                 dcc.Upload(
-                    dbc.Button("Upload", id="right-upload", color="light"),
                     id="right-upload-input",
+                    className="uploader-mini",
+                    children=html.A(html.Div([
+                        "Upload right boundary condition"
+                    ])),
                     multiple=False,
                     accept=".csv"
+                ),
+                dcc.Checklist(
+                    id="create-right-bc-formula",
+                    options=[{'label': 'Formulate right boundary condition', 'value': 1}],
+                    value=[]
+                ),
+                dbc.Input(
+                    id="right-input",
                 ),
                 dcc.Checklist(
                     id="right-input-absorbing",
@@ -120,14 +147,28 @@ form = html.Div([
                     id="top-radio",
                     inline=True,
                 ),
-                dbc.Input(
-                    id="top-input",
-                ),
+                # dcc.Upload(
+                #     dbc.Button("Upload", id="top-upload", color="light"),
+                #     id="top-upload-input",
+                #     multiple=False,
+                #     accept=".csv"
+                # ),
                 dcc.Upload(
-                    dbc.Button("Upload", id="top-upload", color="light"),
                     id="top-upload-input",
+                    className="uploader-mini",
+                    children=html.A(html.Div([
+                        "Upload top boundary condition"
+                    ])),
                     multiple=False,
                     accept=".csv"
+                ),
+                dcc.Checklist(
+                    id="create-top-bc-formula",
+                    options=[{'label': 'Formulate top boundary condition', 'value': 1}],
+                    value=[]
+                ),
+                dbc.Input(
+                    id="top-input",
                 ),
                 dcc.Checklist(
                     id="top-input-absorbing",
@@ -135,9 +176,8 @@ form = html.Div([
                     value=[]
                 ),
             ]), width=4,
-        )
-    ], form=True),
-    dbc.Row([
+        ),
+        dbc.Col(width=1),
         dbc.Col(
             dbc.FormGroup([
                 dbc.RadioItems(
@@ -149,14 +189,28 @@ form = html.Div([
                     id="bottom-radio",
                     inline=True,
                 ),
-                dbc.Input(
-                    id="bottom-input",
-                ),
+                # dcc.Upload(
+                #     dbc.Button("Upload", id="bottom-upload", color="light"),
+                #     id="bottom-upload-input",
+                #     multiple=False,
+                #     accept=".csv"
+                # ),
                 dcc.Upload(
-                    dbc.Button("Upload", id="bottom-upload", color="light"),
                     id="bottom-upload-input",
+                    className="uploader-mini",
+                    children=html.A(html.Div([
+                        "Upload bottom boundary condition"
+                    ])),
                     multiple=False,
                     accept=".csv"
+                ),
+                dcc.Checklist(
+                    id="create-bottom-bc-formula",
+                    options=[{'label': 'Formulate bottom boundary condition', 'value': 1}],
+                    value=[]
+                ),
+                dbc.Input(
+                    id="bottom-input",
                 ),
                 dcc.Checklist(
                     id="bottom-input-absorbing",
@@ -164,7 +218,7 @@ form = html.Div([
                     value=[]
                 ),
             ]), width=4,
-        )
+        ),
     ], form=True),
 ], id="form-bc",)
 
@@ -176,16 +230,110 @@ form = html.Div([
 def disable_dt_field(auto):
     return len(auto) > 0
 
-# @app.callback(
-#     Output("left-input", "disabled"),
-#     Output("right-input", "disabled"),
-#     Output("top-input", "disabled"),
-#     Output("bottom-input", "disabled"),
-#     Input("left-input-absorbing", "value"),
-#     Input("right-input-absorbing", "value"),
-#     Input("top-input-absorbing", "value"),
-#     Input("bottom-input-absorbing", "value"),
-# )
-# def disable_input(left, right, top, bottom):
-#     print(left, right, top, bottom)
-#     return len(left)>0, len(right)>0, len(top)>0, len(bottom)>0
+
+@app.callback(
+    Output("left-input", "style"),
+    Input("create-left-bc-formula", "value")
+)
+def show_form_left(create_new_value):
+    if len(create_new_value):
+        return None
+    else:
+        return {"display": "none"}
+
+
+@app.callback(
+    Output("right-input", "style"),
+    Input("create-right-bc-formula", "value")
+)
+def show_form_right(create_new_value):
+    if len(create_new_value):
+        return None
+    else:
+        return {"display": "none"}
+
+
+@app.callback(
+    Output("top-input", "style"),
+    Input("create-top-bc-formula", "value")
+)
+def show_form_top(create_new_value):
+    if len(create_new_value):
+        return None
+    else:
+        return {"display": "none"}
+
+
+@app.callback(
+    Output("bottom-input", "style"),
+    Input("create-bottom-bc-formula", "value")
+)
+def show_form_bottom(create_new_value):
+    if len(create_new_value):
+        return None
+    else:
+        return {"display": "none"}
+
+
+@app.callback(
+    Output("left-upload-input", "children"),
+    Input("left-upload-input", "contents"),
+    Input("left-upload-input", "filename"),
+)
+def show_filename_left(contents, filename):
+    if contents:
+        return html.A(html.Div([
+            html.I(filename)
+        ], style={"color": "Blue"}))
+    else:
+        return html.A(html.Div([
+            "Upload left boundary condition"
+        ]))
+
+
+@app.callback(
+    Output("right-upload-input", "children"),
+    Input("right-upload-input", "contents"),
+    Input("right-upload-input", "filename"),
+)
+def show_filename_bottom(contents, filename):
+    if contents:
+        return html.A(html.Div([
+            html.I(filename)
+        ], style={"color": "Blue"}))
+    else:
+        return html.A(html.Div([
+            "Upload right boundary condition"
+        ]))
+
+
+@app.callback(
+    Output("top-upload-input", "children"),
+    Input("top-upload-input", "contents"),
+    Input("top-upload-input", "filename"),
+)
+def show_filename_top(contents, filename):
+    if contents:
+        return html.A(html.Div([
+            html.I(filename)
+        ], style={"color": "Blue"}))
+    else:
+        return html.A(html.Div([
+            "Upload top boundary condition"
+        ]))
+
+
+@app.callback(
+    Output("bottom-upload-input", "children"),
+    Input("bottom-upload-input", "contents"),
+    Input("bottom-upload-input", "filename"),
+)
+def show_filename_bottom(contents, filename):
+    if contents:
+        return html.A(html.Div([
+            html.I(filename)
+        ], style={"color": "Blue"}))
+    else:
+        return html.A(html.Div([
+            "Upload bottom boundary condition"
+        ]))

@@ -18,7 +18,7 @@ from swe import bottom
 
 from .app import app
 # from .app import dcb
-from .layouts import initial_conditions, boundary_conditions, upload_bathymetry, sensor_point
+from .layouts import initial_conditions, boundary_conditions, upload_bathymetry, equation_type, sensor_point
 from . import Bathymetry1D, Bathymetry2D, model, save_video1D, save_video2D, g, interpolate_depth1D, interpolate_depth2D, interpolate_input_wave
 from .utils.string_parser import parse_formula
 from .utils.utils import parse_contents
@@ -29,7 +29,7 @@ server = app.server
 navbar = dbc.NavbarSimple(
     children=[],
     brand="Shallow Water Equations",
-    brand_href="#",
+    brand_href="/",
     color="dark",
     dark=True,
 )
@@ -39,11 +39,6 @@ download_data_button = html.Div([
     dcc.Download(id="download-data")
 ])
 button_run = html.Div([
-    dcc.Checklist(
-        id="non-linear-checklist",
-        options=[{'label': 'Use non-linear equations', 'value': 1}],
-        value=[]
-    ),
     dbc.Button("Run", id="button-run", color="primary",
                className="mr-1 mb-3 float-right", disabled=True),
     dcc.Download(id="download-video")
@@ -69,6 +64,8 @@ layout = html.Div([
         initial_conditions.layout,
         html.Hr(),
         boundary_conditions.layout,
+        html.Hr(),
+        equation_type.layout,
         html.Hr(),
         sensor_point.layout,
         html.Hr(),

@@ -15,7 +15,7 @@ import uuid
 import json
 
 from .app import app
-from .layouts import initial_conditions, boundary_conditions, upload_bathymetry, sensor_point
+from .layouts import initial_conditions, boundary_conditions, upload_bathymetry, equation_type, sensor_point
 from . import Bathymetry1D, Bathymetry2D, model, save_video1D, save_video2D, g, interpolate_depth1D, interpolate_depth2D, interpolate_input_wave
 from .utils.string_parser import parse_formula
 from .utils.utils import parse_contents
@@ -63,6 +63,8 @@ def clean_temp_data(_):
     Output("right-input", "disabled"),
     Output("top-input", "disabled"),
     Output("bottom-input", "disabled"),
+    Output("left-upload-input", "disabled"),
+    Output("right-upload-input", "disabled"),
     Output("top-upload-input", "disabled"),
     Output("bottom-upload-input", "disabled"),
     Output("d", "placeholder"),
@@ -74,17 +76,26 @@ def clean_temp_data(_):
     Output("top-radio", "options"),
     Output("bottom-radio", "options"),
     Input("dimension-dropdown", "value"),
+    Input("create-left-bc-formula", "value"),
+    Input("create-right-bc-formula", "value"),
+    Input("create-top-bc-formula", "value"),
+    Input("create-bottom-bc-formula", "value"),
     Input("left-input-absorbing", "value"),
     Input("right-input-absorbing", "value"),
     Input("top-input-absorbing", "value"),
     Input("bottom-input-absorbing", "value"),
 )
-def disable_y(dimension, left, right, top, bottom):
-    left, right, top, bottom = len(left)>0, len(right)>0, len(top)>0, len(bottom)>0
+def disable_bc(dimension, left_formula, right_formula, top_formula, bottom_formula,
+               left_absorb, right_absorb, top_absorb, bottom_absorb):
+    left_formula, right_formula, top_formula, bottom_formula = len(left_formula)>0, len(right_formula)>0, len(top_formula)>0, len(bottom_formula)>0
+    left_absorb, right_absorb, top_absorb, bottom_absorb = len(left_absorb)>0, len(right_absorb)>0, len(top_absorb)>0, len(bottom_absorb)>0
+
     if dimension == '1D':
-        top, bottom = True, True
+        top_disabled, bottom_disabled = True, True
         return (
-            True, True, True, True, True, left, right, top, bottom, True, True,
+            True, True, True, True, True,
+            left_absorb, right_absorb, True, True,
+            left_formula or left_absorb, right_formula or right_absorb, True, True,
             "x/10", html.I("d(x)"),
             html.I([eta + "(x, t", html.Sub("min"), ")"]), html.I(["u(x, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, t)", 'value': 'u'}],
@@ -94,7 +105,9 @@ def disable_y(dimension, left, right, top, bottom):
         )
     if dimension == '2D':
         return (
-            False, False, False, False, False, left, right, top, bottom, False, False,
+            False, False, False, False, False,
+            left_absorb, right_absorb, top_absorb, bottom_absorb,
+            left_formula or left_absorb, right_formula or right_absorb, top_formula or top_absorb, bottom_formula or bottom_absorb,
             "(x+y)/10", html.I("d(x, y)"),
             html.I([eta + "(x, y, t", html.Sub("min"), ")"]), html.I(["u(x, y, t", html.Sub("min"), ")"]),
             [{'label': eta + u"(x\u2098\u2097\u2099, y, t)", 'value': 'eta'}, {'label': u"u(x\u2098\u2097\u2099, y, t)", 'value': 'u'}],
@@ -124,7 +137,7 @@ def disable_y(dimension, left, right, top, bottom):
     Input("t-min", "value"),
     Input("t-max", "value"),
     Input("dt", "value"),
-    Input("create-new-bathymetry", "value"),
+    Input("create-bathymetry-formula", "value"),
     Input("dx", "value"),
     Input("dy", "value"),
     Input("x0", "value"),
@@ -180,9 +193,6 @@ def disable_button(bathymetry_contents,
     right_filled = right_formula or right_contents
     top_filled = top_formula or top_contents
     bottom_filled = bottom_formula or bottom_contents
-    
-    # if not (t_min and t_max and dt and left_filled and right_filled and top_filled and bottom_filled):
-    #     disabled = True
 
     store_dict['t_min'], store_dict['t_max'] = t_min, t_max
     store_dict['dt'] = dt
@@ -242,7 +252,7 @@ def trigger_store_hide_gray(a):
     Output("button-download-data", "style"),
     Output("download-video", "data"),
     Input("button-run", "n_clicks"),
-    State("create-new-bathymetry", "value"),
+    State("create-bathymetry-formula", "value"),
     State("dimension-dropdown", "value"),
     State("eta-initial", "value"),
     State("u-initial", "value"),
@@ -252,13 +262,14 @@ def trigger_store_hide_gray(a):
     State("right-radio", "value"),
     State("top-radio", "value"),
     State("bottom-radio", "value"),
-    State("non-linear-checklist", "value"),
+    State("linearity-dropdown", "value"),
+    State("eps", "value"),
     State("store", "data"),
     prevent_initial_call=True
 )
 def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             dt_auto, left_bc, right_bc, top_bc, bottom_bc,
-            advection, store):
+            linearity, eps, store):
 
     try:
         store_dict = json.loads(store)
@@ -271,8 +282,8 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
                 df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
                 x, y, d = interpolate_depth2D(df_bathymetry, dx=dx, dy=dy)
             else:
-                x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
-                y = np.arange(store_dict['y_min'], store_dict['y_max'], dy)
+                x = np.arange(store_dict['x_min'], store_dict['x_max'] + dx/2, dx)
+                y = np.arange(store_dict['y_min'], store_dict['y_max'] + dy/2, dy)
                 X, Y = np.meshgrid(x, y)
                 X, Y = X.T, Y.T
                 d = parse_formula({'x': X, 'y': Y, 'pi': np.pi,
@@ -291,7 +302,7 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             ic = {'eta': eta_initial, 'u': u_initial, 'v': v_initial}
 
             # boundary conditions
-            H = d.max()
+            H = (d+eta_initial).max()
             c = np.sqrt(g * H)
             if len(dt_auto):
                 dt = 0.5 / (c * np.sqrt(1/dx**2 + 1/dy**2))
@@ -313,12 +324,12 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             j1 = y.shape[0] - 1 if bottom_bc == 'eta' else y.shape[0]
 
             start = time.time()
-            E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, advection=advection, verbose=1)
+            E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, linearity=linearity, eps=eps, verbose=1)
             x0, y0 = store_dict['x0'], store_dict['y0']
             x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
             df = pd.DataFrame({'t': t, 'eta': E[x0_idx, y0_idx, :]})
             temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
-            save_video2D(temp_file, bathymetry, E, dt=dt, fps=1)
+            save_video2D(temp_file, bathymetry, E, dt=dt, fps=4)
             end = time.time()
             return f'SWE finished in {end - start} s', df.to_json(), None, None, dcc.send_file(temp_file)
         
@@ -330,7 +341,7 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
                 df_bathymetry = parse_contents(store_dict['bathymetry_contents'])
                 x, d = interpolate_depth1D(df_bathymetry, dx=dx)
             else:
-                x = np.arange(store_dict['x_min'], store_dict['x_max'], dx)
+                x = np.arange(store_dict['x_min'], store_dict['x_max'] + dx/2, dx)
                 d = parse_formula({'x': x, 'pi': np.pi,
                                 'Pi': np.pi}, store_dict['d'])
                 if not isinstance(d, np.ndarray):
@@ -346,7 +357,7 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             ic = {'eta': eta_initial, 'u': u_initial}
 
             # boundary conditions
-            H = d.max()
+            H = (d+eta_initial).max()
             c = np.sqrt(g * H)
             if len(dt_auto):
                 dt = 0.5 / (c / dx)
@@ -360,6 +371,7 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
                     t, bc[bound] = interpolate_input_wave(bc[bound], dt)
                 else:
                     t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
+                    print(store_dict[bound + '_formula'])
                     bc[bound] = parse_formula({'t': t, 'pi': np.pi,
                                             'Pi': np.pi}, store_dict[bound + '_formula'])
             
@@ -367,16 +379,17 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
 
             start = time.time()
-            E, _ = model.swe1D(bathymetry, t, ic, bc, i0, i1, advection=advection, verbose=1)
+            E, _ = model.swe1D(bathymetry, t, ic, bc, i0, i1, linearity=linearity, eps=eps, verbose=1)
             x0 = store_dict['x0']
             x0_idx = np.argmin(np.abs(x - x0))
             df = pd.DataFrame({'t': t, 'eta': E[x0_idx, :]})
             temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
-            save_video1D(temp_file, bathymetry, E, dt=dt, fps=1)
+            save_video1D(temp_file, bathymetry, E, dt=dt, fps=12)
             store_dict['temp_file'] = temp_file
             end = time.time()
             return (f'SWE finished in {end - start} s',
                 df.to_json(), None, None, dcc.send_file(temp_file))
+    
     except Exception as e:
         print(e)
         time.sleep(10)

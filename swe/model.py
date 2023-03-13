@@ -4,7 +4,7 @@ import numpy as np
 from tqdm import tqdm
 
 
-def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, advection=True, eps=1e-3, verbose=1):
+def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearity='linear', eps=1e-3, verbose=1):
     
     d = bathymetry.d
     
@@ -53,12 +53,12 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, advectio
         u1 = u[:, n+1]
 
         e0[:] = np.maximum(e0, -d)
-        hx[:], p[:] = _upwind1D(d, e0, u0, hx, p, advection=advection)
+        hx[:], p[:] = _upwind1D(d, e0, u0, hx, p, linearity=linearity)
 
         # calculate e(x, t_{n + 1})
         e1[i0: i1] = e0[i0: i1] - S * (p[i0 + 1: i1 + 1] - p[i0: i1])
         e1[:] = np.maximum(e1, -d)
-        if advection:
+        if linearity == 'non-linear':
             h = d + e1
         else:
             h = d.copy()
@@ -67,7 +67,7 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, advectio
         wetx = h[i0: i1 - 1] + h[i0 + 1: i1] > eps
         hbarx = wetx * (h[i0: i1 - 1] + h[i0 + 1: i1]) / 2
         hbarx[hbarx == 0] = -1
-        if advection:
+        if linearity != 'linear':
             pb1 = wetx * (p[i0: i1 - 1] + p[i0 + 1: i1]) / 2
             pb2 = wetx * (p[i0 + 1: i1] + p[i0 + 2: i1 + 1]) / 2
             u_1 = wetx * ((pb1 > 0) * u0[i0: i1 - 1] + (pb1 < 0) * u0[i0 + 1: i1])
@@ -88,7 +88,7 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, advectio
     return e, u
 
 
-def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, advection=True, eps=0, verbose=1):
+def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, i1=None, j0=1, j1=None, linearity='linear', eps=0, verbose=1):
     
     d = bathymetry.d
     
@@ -116,6 +116,15 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
     q = np.zeros((Nx, Ny + 1))
     hx = np.zeros((Nx + 1, Ny))
     hy = np.zeros((Nx, Ny + 1))
+
+    if initial_condition is None:
+        initial_condition = {'eta': 0, 'u': 0, 'v': 0}
+    if boundary_condition is None:
+        boundary_condition = {'left': 0, 'right': 0, 'top': 0, 'bottom': 0}
+    if i1 is None:
+        i1 = Nx
+    if j1 is None:
+        j1 = Ny
 
     # initial conditions
     e[:, :, 0] = initial_condition['eta'] if 'eta' in initial_condition else 0
@@ -161,8 +170,8 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
         v1 = v[:, :, n+1]
         
         e0[:, :] = np.maximum(e0, -d)
-        hx[:, :], p[:, :] = _upwind2D(d, e0, u0, hx, p, advection=advection)
-        hy[:, :], q[:, :] = _upwind2D(d, e0, v0, hy, q, advection=advection, transpose=True)
+        hx[:, :], p[:, :] = _upwind2D(d, e0, u0, hx, p, linearity=linearity)
+        hy[:, :], q[:, :] = _upwind2D(d, e0, v0, hy, q, linearity=linearity, transpose=True)
 
         # calculate e(x, y, t_{n + 1})
         e1[i0: i1, j0: j1] = (
@@ -171,19 +180,20 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
             S2 * (q[i0: i1, j0 + 1: j1 + 1] - q[i0: i1, j0: j1])
         )
         e1[:, :] = np.maximum(e1, -d)
-        if advection:
+        if linearity == 'non-linear':
             h = d + e1
         else:
             h = d.copy()
         
         # calculate u(x, y, t_{n + 1})
         wetx = np.zeros((i1 - i0 - 1, Ny))
-        wetx[(h[i0: i1 - 1, :] + h[i0 + 1: i1, :] > eps)] = 1
+        # wetx[(h[i0: i1 - 1, :] + h[i0 + 1: i1, :] > eps)] = 1
+        wetx[(h[i0: i1 - 1, :] * h[i0 + 1: i1, :] >= eps)] = 1
         hbarx = wetx * (h[i0: i1 - 1, :] + h[i0 + 1: i1, :]) / 2
         hbarx[hbarx <= eps] = -1
         vb = np.where(hbarx[:, 1: Ny - 1] > eps,
                     (v0[i0: i1 - 1, 1: Ny - 1] + v0[i0 + 1: i1, 1: Ny - 1] + v0[i0: i1 - 1, 2: Ny] + v0[i0 + 1: i1, 2: Ny]) / 4, 0)
-        if advection:
+        if linearity != 'linear':
             pb1x = wetx * (p[i0: i1 - 1, :] + p[i0 + 1: i1, :]) / 2
             pb2x = wetx * (p[i0 + 1: i1, :] + p[i0 + 2: i1 + 1, :]) / 2
             u_1x = wetx * ((pb1x > 0) * u0[i0: i1 - 1, :] + (pb1x < 0) * u0[i0 + 1: i1, :])
@@ -212,12 +222,13 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
         
         # calculate v(x, y, t_{n + 1})
         wety = np.zeros((Nx, j1 - j0 - 1))
-        wety[(h[:, j0: j1 - 1] + h[:, j0 + 1: j1] > eps)] = 1
+        # wety[(h[:, j0: j1 - 1] + h[:, j0 + 1: j1] > eps)] = 1
+        wety[(h[:, j0: j1 - 1] * h[:, j0 + 1: j1] >= eps)] = 1
         hbary = wety * (h[:, j0: j1 - 1] + h[:, j0 + 1: j1]) / 2
         hbary[hbary <= eps] = -1
         ub = np.where(hbary[1: Nx - 1, :] > eps,
                       (u0[1: Nx - 1, j0: j1 - 1] + u0[2: Nx, j0: j1 - 1] + u0[1: Nx - 1, j0 + 1: j1] + u0[2: Nx, j0 + 1: j1]) / 4, 0)
-        if advection:
+        if linearity != 'linear':
             qb1y = wety * (q[:, j0: j1 - 1] + q[:, j0 + 1: j1]) / 2
             qb2y = wety * (q[:, j0 + 1: j1] + q[:, j0 + 2: j1 + 1]) / 2
             v_1y = wety * ((qb1y > 0) * v0[:, j0: j1 - 1] + (qb1y < 0) * v0[:, j0 + 1: j1])
@@ -247,7 +258,7 @@ def swe2D(bathymetry, t, initial_condition, boundary_condition, i0, i1, j0, j1, 
     return e, u, v
 
 
-def _upwind1D(d, e0, u0, hx, q, advection=True, transpose=False):
+def _upwind1D(d, e0, u0, hx, q, linearity='linear', transpose=False):
     
     d, e0, u0, hx, q = d.copy(), e0.copy(), u0.copy(), hx.copy(), q.copy()
     
@@ -263,7 +274,7 @@ def _upwind1D(d, e0, u0, hx, q, advection=True, transpose=False):
     idxZero = u0[1: Nx] == 0
 
     # upwind
-    if advection:
+    if linearity != 'linear':
         hx[1: Nx][idxPos] = d[0: Nx - 1][idxPos] + e0[0: Nx - 1][idxPos]
         hx[1: Nx][idxNeg] = d[1: Nx][idxNeg] + e0[1: Nx][idxNeg]
         hx[1: Nx][idxZero] = (
@@ -292,7 +303,7 @@ def _upwind1D(d, e0, u0, hx, q, advection=True, transpose=False):
     return hx, q
 
 
-def _upwind2D(d, e0, u0, hx, q, advection=True, transpose=False):
+def _upwind2D(d, e0, u0, hx, q, linearity='linear', transpose=False):
     
     d, e0, u0, hx, q = d.copy(), e0.copy(), u0.copy(), hx.copy(), q.copy()
     
@@ -308,7 +319,7 @@ def _upwind2D(d, e0, u0, hx, q, advection=True, transpose=False):
     idxZero = u0[1: Nx, :] == 0
 
     # upwind
-    if advection:
+    if linearity != 'linear':
         hx[1: Nx, :][idxPos] = d[0: Nx - 1, :][idxPos] + e0[0: Nx - 1, :][idxPos]
         hx[1: Nx, :][idxNeg] = d[1: Nx, :][idxNeg] + e0[1: Nx, :][idxNeg]
         hx[1: Nx, :][idxZero] = (
