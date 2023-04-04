@@ -41,9 +41,12 @@ def save_video1D(file, bathymetry, E, dt=1, fps=12, n_frames=None):
     ani.save(file, writer=writer)
     plt.close()
 
-def save_video2D(file, bathymetry, E, dt=1, fps=1, n_frames=None):
+def save_video2D(file, bathymetry, E, Z=None, dt=1, fps=1, n_frames=None):
     X, Y, d = bathymetry.X, bathymetry.Y, bathymetry.d
-    zmin = -np.abs(d).max()
+    if Z is not None:
+        zmin = -np.abs(-Z).max()
+    else:
+        zmin = -np.abs(d).max()
     zmax = -zmin
     
     if n_frames is None:
@@ -57,10 +60,16 @@ def save_video2D(file, bathymetry, E, dt=1, fps=1, n_frames=None):
     def update_plot(frame_number, z, plots):
         n = int(frame_number * skipped)
         ax.view_init(45, -120)
-        z_masked = np.where(z[:, :, n] > -d, z[:, :, n], np.nan)
+        if Z is not None:
+            z_masked = np.where(z[:, :, n] > Z[:, :, n], z[:, :, n], np.nan)
+        else:
+            z_masked = np.where(z[:, :, n] > -d, z[:, :, n], np.nan)
         z_masked = np.ma.masked_invalid(z_masked)
         plots[0].remove()
-        plots[0] = ax.plot_surface(X, Y, -d, color='C1')
+        if Z is not None:
+            plots[0] = ax.plot_surface(X, Y, Z[:, :, n], color='C1')
+        else:
+            plots[0] = ax.plot_surface(X, Y, -d, color='C1')
         plots[1].remove()
         plots[1] = ax.plot_surface(X, Y, z_masked, cmap='winter',
                                   rstride=1, cstride=1, vmin=zmin, vmax=zmax)
@@ -70,11 +79,19 @@ def save_video2D(file, bathymetry, E, dt=1, fps=1, n_frames=None):
     ax = fig.add_subplot(111, projection='3d', xlabel='x', ylabel='y')
     ax.set_zlim(zmin, zmax)
     ax.view_init(45, -120)
-    E_masked = np.where(E[:, :, 0] > -d, E[:, :, 0], np.nan)
+    if Z is not None:
+        E_masked = np.where(E[:, :, 0] > Z[:, :, 0], E[:, :, 0], np.nan)
+    else:
+        E_masked = np.where(E[:, :, 0] > -d, E[:, :, 0], np.nan)
     E_masked = np.ma.masked_invalid(E_masked)
-    plots = [ax.plot_surface(X, Y, -d, color='C1'),
-             ax.plot_surface(X, Y, E_masked, cmap='winter',
-                             rstride=1, cstride=1, vmin=zmin, vmax=zmax)]
+    if Z is not None:
+        plots = [ax.plot_surface(X, Y, Z[:, :, 0], color='C1'),
+                ax.plot_surface(X, Y, E_masked, cmap='winter',
+                                rstride=1, cstride=1, vmin=zmin, vmax=zmax)]
+    else:
+        plots = [ax.plot_surface(X, Y, -d, color='C1'),
+                ax.plot_surface(X, Y, E_masked, cmap='winter',
+                                rstride=1, cstride=1, vmin=zmin, vmax=zmax)]
     ani = animation.FuncAnimation(fig, update_plot, frames=n_frames, fargs=(E, plots), interval=1000/fps, blit=True)
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=fps)

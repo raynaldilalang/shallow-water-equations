@@ -2,7 +2,7 @@ from dash import html
 from dash import dcc
 from dash.dependencies import Input, Output
 
-from .app import app
+from .app import app, server
 from . import index
 
 import os

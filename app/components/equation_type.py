@@ -9,20 +9,21 @@ import io
 import pandas as pd
 
 from ..app import app
-from ..utils.characters import Delta, eta, eps
+from ..utils.characters import Delta, eta, eps, zeta
 
 
 form = html.Div([
     dbc.Row([
             dbc.Col(
                 dbc.FormGroup([
-                    dbc.Label("Dimension", html_for="dy"),
+                    dbc.Label("Equation Type", html_for="dy"),
                     dcc.Dropdown(
                         id='linearity-dropdown',
                         options=[
                             {'label': 'Linear', 'value': 'linear'},
                             {'label': 'Half-linear', 'value': 'half-linear'},
                             {'label': 'Non-linear', 'value': 'non-linear'},
+                            {'label': 'Saint-Venant-Exner', 'value': 'saint-venant-exner non-linear'},
                         ],
                         value='linear',
                         clearable=False
@@ -39,7 +40,40 @@ form = html.Div([
                         type="number",
                         max=1e-1,
                         min=0,
-                        placeholder=0
+                        value=0
+                    ),
+                ]), width=2,
+            ),
+            dbc.Col(
+                dbc.FormGroup([
+                    dbc.Label(html.I(zeta), html_for="zeta"),
+                    dbc.Input(
+                        id="zeta",
+                        type="number",
+                        min=0,
+                        value=0
+                    ),
+                ]), width=2,
+            ),
+            dbc.Col(
+                dbc.FormGroup([
+                    dbc.Label(html.I("ag"), html_for="ag"),
+                    dbc.Input(
+                        id="ag",
+                        type="number",
+                        min=0,
+                        value=0
+                    ),
+                ]), width=2,
+            ),
+            dbc.Col(
+                dbc.FormGroup([
+                    dbc.Label(html.I("k"), html_for="k"),
+                    dbc.Input(
+                        id="k",
+                        type="number",
+                        min=0,
+                        value=0
                     ),
                 ]), width=2,
             )

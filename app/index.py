@@ -58,7 +58,6 @@ def clean_temp_data(_):
     Output("y-max", "disabled"),
     Output("dy", "disabled"),
     Output("v-initial", "disabled"),
-    Output("y0", "disabled"),
     Output("left-input", "disabled"),
     Output("right-input", "disabled"),
     Output("top-input", "disabled"),
@@ -93,7 +92,7 @@ def disable_bc(dimension, left_formula, right_formula, top_formula, bottom_formu
     if dimension == '1D':
         top_disabled, bottom_disabled = True, True
         return (
-            True, True, True, True, True,
+            True, True, True, True,
             left_absorb, right_absorb, True, True,
             left_formula or left_absorb, right_formula or right_absorb, True, True,
             "x/10", html.I("d(x)"),
@@ -105,7 +104,7 @@ def disable_bc(dimension, left_formula, right_formula, top_formula, bottom_formu
         )
     if dimension == '2D':
         return (
-            False, False, False, False, False,
+            False, False, False, False,
             left_absorb, right_absorb, top_absorb, bottom_absorb,
             left_formula or left_absorb, right_formula or right_absorb, top_formula or top_absorb, bottom_formula or bottom_absorb,
             "(x+y)/10", html.I("d(x, y)"),
@@ -140,8 +139,7 @@ def disable_bc(dimension, left_formula, right_formula, top_formula, bottom_formu
     Input("create-bathymetry-formula", "value"),
     Input("dx", "value"),
     Input("dy", "value"),
-    Input("x0", "value"),
-    Input("y0", "value"),
+    Input("sensor-upload", "contents"),
     State("dimension-dropdown", "value"),
     State("store", "data"),
 )
@@ -151,23 +149,21 @@ def disable_button(bathymetry_contents,
                    x_min, x_max, y_min, y_max, d_formula,
                    t_min, t_max, dt,
                    create_bathymetry,
-                   dx, dy, x0, y0, dimension, store):
+                   dx, dy, sensor_contents, dimension, store):
 
     disabled = False
     store_dict = json.loads(store)
 
     if dimension == '2D':
-        if any([val is None for val in [dx, dy, x0, y0]]):
+        if any([val is None for val in [dx, dy]]):
             disabled = True
         else:
             store_dict['dx'], store_dict['dy'] = dx, dy
-            store_dict['x0'], store_dict['y0'] = x0, y0
     else:
-        if any([val is None for val in [dx, x0]]):
+        if any([val is None for val in [dx]]):
             disabled = True
         else:
             store_dict['dx'] = dx
-            store_dict['x0'] = x0
 
     if len(create_bathymetry):
         if dimension == '2D':
@@ -206,6 +202,8 @@ def disable_button(bathymetry_contents,
     store_dict['right_contents'] = right_contents
     store_dict['top_contents'] = top_contents
     store_dict['bottom_contents'] = bottom_contents
+
+    store_dict['sensor_contents'] = sensor_contents
 
     return disabled, json.dumps(store_dict)
 
@@ -264,12 +262,15 @@ def trigger_store_hide_gray(a):
     State("bottom-radio", "value"),
     State("linearity-dropdown", "value"),
     State("eps", "value"),
+    State("zeta", "value"),
+    State("ag", "value"),
+    State("k", "value"),
     State("store", "data"),
     prevent_initial_call=True
 )
 def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             dt_auto, left_bc, right_bc, top_bc, bottom_bc,
-            linearity, eps, store):
+            linearity, eps, zeta, ag, k, store):
 
     try:
         store_dict = json.loads(store)
@@ -324,14 +325,28 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             j1 = y.shape[0] - 1 if bottom_bc == 'eta' else y.shape[0]
 
             start = time.time()
-            E, _, _ = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1, linearity=linearity, eps=eps, verbose=1)
-            x0, y0 = store_dict['x0'], store_dict['y0']
-            x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
-            df = pd.DataFrame({'t': t, 'eta': E[x0_idx, y0_idx, :]})
+            E, _, _, Z = model.swe2D(bathymetry, t, ic, bc, i0, i1, j0, j1,
+                linearity=linearity, eps=eps, zeta=zeta, ag=ag, k=k, verbose=1)
+            df_sensors = parse_contents(store_dict['sensor_contents'])
+            x_s, y_s = df_sensors['x'].values, df_sensors['y'].values
+            x_s_idxs, y_s_idxs, df_outs = [], [], []
+            for x0, y0 in zip(x_s, y_s):
+                x0_idx, y0_idx = np.argmin(np.abs(x - x0)), np.argmin(np.abs(y - y0))
+                df_outs.append(pd.DataFrame({
+                    'x': [x0]*t.shape[0],
+                    'y': [y0]*t.shape[0],
+                    't': t,
+                    'eta': E[x0_idx, y0_idx, :],
+                    'z': Z[x0_idx, y0_idx, :]
+                }))
+            df_out = pd.concat(df_outs, ignore_index=True)
             temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
-            save_video2D(temp_file, bathymetry, E, dt=dt, fps=4)
+            if 'saint-venant-exner' in linearity.lower():
+                save_video2D(temp_file, bathymetry, E, Z=Z, dt=dt, fps=4)
+            else:
+                save_video2D(temp_file, bathymetry, E, dt=dt, fps=4)
             end = time.time()
-            return f'SWE finished in {end - start} s', df.to_json(), None, None, dcc.send_file(temp_file)
+            return f'SWE finished in {end - start} s', df_out.to_json(), None, None, dcc.send_file(temp_file)
         
         if dimension == '1D':
             dx = store_dict['dx']
@@ -371,7 +386,6 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
                     t, bc[bound] = interpolate_input_wave(bc[bound], dt)
                 else:
                     t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
-                    print(store_dict[bound + '_formula'])
                     bc[bound] = parse_formula({'t': t, 'pi': np.pi,
                                             'Pi': np.pi}, store_dict[bound + '_formula'])
             
@@ -379,16 +393,25 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             i1 = x.shape[0] - 1 if right_bc == 'eta' else x.shape[0]
 
             start = time.time()
-            E, _ = model.swe1D(bathymetry, t, ic, bc, i0, i1, linearity=linearity, eps=eps, verbose=1)
-            x0 = store_dict['x0']
-            x0_idx = np.argmin(np.abs(x - x0))
-            df = pd.DataFrame({'t': t, 'eta': E[x0_idx, :]})
+            E, _, Z = model.swe1D(bathymetry, t, ic, bc, i0, i1, linearity=linearity, eps=eps, verbose=1)
+            df_sensors = parse_contents(store_dict['sensor_contents'])
+            x_s = df_sensors['x'].values
+            x_s_idxs, df_outs = [], []
+            for x0 in x_s:
+                x0_idx = np.argmin(np.abs(x - x0))
+                df_outs.append(pd.DataFrame({
+                    'x': [x0]*t.shape[0],
+                    't': t,
+                    'eta': E[x0_idx, :],
+                    'z': Z[x0_idx, :]
+                }))
+            df_out = pd.concat(df_outs, ignore_index=True)
             temp_file = './temp/' + str(uuid.uuid1()) + '.mp4'
             save_video1D(temp_file, bathymetry, E, dt=dt, fps=12)
             store_dict['temp_file'] = temp_file
             end = time.time()
             return (f'SWE finished in {end - start} s',
-                df.to_json(), None, None, dcc.send_file(temp_file))
+                df_out.to_json(), None, None, dcc.send_file(temp_file))
     
     except Exception as e:
         print(e)

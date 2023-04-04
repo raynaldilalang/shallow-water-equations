@@ -4,7 +4,9 @@ import numpy as np
 from tqdm import tqdm
 
 
-def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearity='linear', eps=1e-3, verbose=1):
+def swe1D(bathymetry, t, initial_condition=None, boundary_condition=None,
+          i0=1, i1=None, linearity='linear', eps=0,
+          zeta=0, ag=0, k=0, verbose=1):
     
     d = bathymetry.d
     
@@ -19,13 +21,25 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearit
     
     e = np.zeros((Nx, Nt)) 
     u = np.zeros((Nx + 1, Nt))
+    z = np.zeros((Nx, Nt))
     
     p = np.zeros((Nx + 1))
     hx = np.zeros((Nx + 1))
 
+    if initial_condition is None:
+        initial_condition = {'eta': 0, 'u': 0}
+    if boundary_condition is None:
+        boundary_condition = {'left': 0, 'right': 0}
+    if i1 is None:
+        i1 = Nx
+
     # initial conditions
     e[:, 0] = initial_condition['eta']
     u[:, 0] = initial_condition['u']
+
+    e[:, 0] = initial_condition['eta'] if 'eta' in initial_condition else 0
+    u[:, 0] = initial_condition['u'] if 'u' in initial_condition else 0
+    z[:, :] = -d.reshape((Nx, 1))
 
     # boundary conditions
     if i0 == 0:
@@ -58,7 +72,7 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearit
         # calculate e(x, t_{n + 1})
         e1[i0: i1] = e0[i0: i1] - S * (p[i0 + 1: i1 + 1] - p[i0: i1])
         e1[:] = np.maximum(e1, -d)
-        if linearity == 'non-linear':
+        if 'non-linear' in linearity.lower():
             h = d + e1
         else:
             h = d.copy()
@@ -67,7 +81,7 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearit
         wetx = h[i0: i1 - 1] + h[i0 + 1: i1] > eps
         hbarx = wetx * (h[i0: i1 - 1] + h[i0 + 1: i1]) / 2
         hbarx[hbarx == 0] = -1
-        if linearity != 'linear':
+        if linearity.lower() != 'linear':
             pb1 = wetx * (p[i0: i1 - 1] + p[i0 + 1: i1]) / 2
             pb2 = wetx * (p[i0 + 1: i1] + p[i0 + 2: i1 + 1]) / 2
             u_1 = wetx * ((pb1 > 0) * u0[i0: i1 - 1] + (pb1 < 0) * u0[i0 + 1: i1])
@@ -76,19 +90,31 @@ def swe1D(bathymetry, t, initial_condition, boundary_condition, i0, i1, linearit
             uux = np.ma.fix_invalid(uux, fill_value=0).data
         else:
             uux = np.zeros(i1 - i0 - 1)
-        Rx = 1
-        if bathymetry.porous:
-            Rx = np.where((wetx > 0) & (x_[i0 + 1: i1] > bathymetry.porous0) & (x_[i0 + 1: i1] < bathymetry.porous1), 1 + bathymetry.cf*dt*np.abs(u0[i0 + 1: i1]) / hbarx, 1)
-        u1[i0 + 1: i1] = wetx * (u0[i0 + 1: i1] - g * S * (e1[i0 + 1: i1] - e1[i0: i1 - 1]) - S * uux) / Rx
+        Rx = np.where((hbarx > eps),
+            1 + bathymetry.cf[i0 + 1: i1]*dt*np.abs(u0[i0 + 1: i1]) / hbarx, 1
+        )
+        sfx = np.where(hbarx > eps,
+            g * k**2 * np.abs(u0[i0 + 1: i1]) / ((hbarx**4)**(1/3)), 0)
+        # u1[i0 + 1: i1] = wetx * (u0[i0 + 1: i1] - g * S * (e1[i0 + 1: i1] - e1[i0: i1 - 1]) - S * uux) / (Rx * (1+dt*sfx))
+        u1[i0 + 1: i1] = wetx * (u0[i0 + 1: i1] - g * S * (e1[i0 + 1: i1] - e1[i0: i1 - 1]) - S * uux)
         if i0 == 1:
             u1[i0] = u0[i0] - g * S * (e1[i0] - e1[i0 - 1])
         if i1 == Nx - 1:
             u1[i1] = u0[i1] - g * S * (e1[i1] - e1[i1 - 1])
 
-    return e, u
+        if 'saint-venant-exner' in linearity.lower():
+            # calculate z(x, t_{n + 1})
+            qsx = np.zeros((Nx + 1, Ny))
+            qsx = ag * (u1**3)
+            
+            z1[:, :] = z0[:, :] - zeta*S * (qsx[1: Nx + 1] - qsx[0: Nx])
+
+    return e, u, z
 
 
-def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, i1=None, j0=1, j1=None, linearity='linear', eps=0, verbose=1):
+def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None,
+          i0=1, i1=None, j0=1, j1=None, linearity='linear', eps=0,
+          zeta=0, ag=0, k=0, verbose=1):
     
     d = bathymetry.d
     
@@ -111,7 +137,7 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
     e = np.zeros((Nx, Ny, Nt)) 
     u = np.zeros((Nx + 1, Ny, Nt)) 
     v = np.zeros((Nx, Ny + 1, Nt))
-    
+    z = np.zeros((Nx, Ny, Nt))
     p = np.zeros((Nx + 1, Ny))
     q = np.zeros((Nx, Ny + 1))
     hx = np.zeros((Nx + 1, Ny))
@@ -130,6 +156,7 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
     e[:, :, 0] = initial_condition['eta'] if 'eta' in initial_condition else 0
     u[:, :, 0] = initial_condition['u'] if 'u' in initial_condition else 0
     v[:, :, 0] = initial_condition['v'] if 'v' in initial_condition else 0
+    z[:, :, :] = -d.reshape((Nx, Ny, 1))
 
     # boundary conditions
     if i0 == 0:
@@ -168,6 +195,8 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
         e1 = e[:, :, n+1]
         u1 = u[:, :, n+1]
         v1 = v[:, :, n+1]
+        z0 = z[:, :, n]
+        z1 = z[:, :, n+1]
         
         e0[:, :] = np.maximum(e0, -d)
         hx[:, :], p[:, :] = _upwind2D(d, e0, u0, hx, p, linearity=linearity)
@@ -180,20 +209,20 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
             S2 * (q[i0: i1, j0 + 1: j1 + 1] - q[i0: i1, j0: j1])
         )
         e1[:, :] = np.maximum(e1, -d)
-        if linearity == 'non-linear':
+        if 'non-linear' in linearity.lower():
             h = d + e1
         else:
             h = d.copy()
         
         # calculate u(x, y, t_{n + 1})
         wetx = np.zeros((i1 - i0 - 1, Ny))
-        # wetx[(h[i0: i1 - 1, :] + h[i0 + 1: i1, :] > eps)] = 1
-        wetx[(h[i0: i1 - 1, :] * h[i0 + 1: i1, :] >= eps)] = 1
+        wetx[(h[i0: i1 - 1, :] + h[i0 + 1: i1, :] > eps)] = 1
+        # wetx[(h[i0: i1 - 1, :] * h[i0 + 1: i1, :] >= eps)] = 1
         hbarx = wetx * (h[i0: i1 - 1, :] + h[i0 + 1: i1, :]) / 2
         hbarx[hbarx <= eps] = -1
         vb = np.where(hbarx[:, 1: Ny - 1] > eps,
                     (v0[i0: i1 - 1, 1: Ny - 1] + v0[i0 + 1: i1, 1: Ny - 1] + v0[i0: i1 - 1, 2: Ny] + v0[i0 + 1: i1, 2: Ny]) / 4, 0)
-        if linearity != 'linear':
+        if linearity.lower() != 'linear':
             pb1x = wetx * (p[i0: i1 - 1, :] + p[i0 + 1: i1, :]) / 2
             pb2x = wetx * (p[i0 + 1: i1, :] + p[i0 + 2: i1 + 1, :]) / 2
             u_1x = wetx * ((pb1x > 0) * u0[i0: i1 - 1, :] + (pb1x < 0) * u0[i0 + 1: i1, :])
@@ -212,7 +241,9 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
         Rx = np.where((hbarx[:, 1: Ny - 1] > eps),
             1 + bathymetry.cf_x[i0 + 1: i1, 1: Ny - 1]*dt*np.sqrt((u0[i0 + 1: i1, 1: Ny - 1])**2 + (vb)**2) / hbarx[:, 1: Ny - 1], 1
         )
-        u1[i0 + 1: i1, 1: Ny - 1] = wetx[:, 1: Ny - 1] * (u0[i0 + 1: i1, 1: Ny - 1] - g * S1 * (e1[i0 + 1: i1, 1: Ny - 1] - e1[i0: i1 - 1, 1: Ny - 1]) - S1 * uux[:, 1: Ny - 1] - S2 * vuy) / Rx
+        sfx = np.where(hbarx[:, 1: Ny - 1] > eps,
+            g * k**2 * np.sqrt(u0[i0 + 1: i1, 1: Ny - 1]**2 + ((v0[i0: i1 - 1, 1: Ny - 1] + v0[i0 + 1: i1, 1: Ny - 1] + v0[i0: i1 - 1, 2: Ny] + v0[i0 + 1: i1, 2: Ny]) / 4)**2) / ((hbarx[:, 1: Ny - 1]**4)**(1/3)), 0)
+        u1[i0 + 1: i1, 1: Ny - 1] = wetx[:, 1: Ny - 1] * (u0[i0 + 1: i1, 1: Ny - 1] - g * S1 * (e1[i0 + 1: i1, 1: Ny - 1] - e1[i0: i1 - 1, 1: Ny - 1]) - S1 * uux[:, 1: Ny - 1] - S2 * vuy) / (Rx * (1+dt*sfx))
         u1[i0 + 1: i1, 0] = wetx[:, 0] * (u0[i0 + 1: i1, 0] - g * S1 * (e1[i0 + 1: i1, 0] - e1[i0: i1 - 1, 0]) - S1 * uux[:, 0])
         u1[i0 + 1: i1, -1] = wetx[:, -1] * (u0[i0 + 1: i1, -1] - g * S1 * (e1[i0 + 1: i1, -1] - e1[i0: i1 - 1, -1]) - S1 * uux[:, -1])
         if i0 == 1:
@@ -222,13 +253,13 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
         
         # calculate v(x, y, t_{n + 1})
         wety = np.zeros((Nx, j1 - j0 - 1))
-        # wety[(h[:, j0: j1 - 1] + h[:, j0 + 1: j1] > eps)] = 1
-        wety[(h[:, j0: j1 - 1] * h[:, j0 + 1: j1] >= eps)] = 1
+        wety[(h[:, j0: j1 - 1] + h[:, j0 + 1: j1] > eps)] = 1
+        # wety[(h[:, j0: j1 - 1] * h[:, j0 + 1: j1] >= eps)] = 1
         hbary = wety * (h[:, j0: j1 - 1] + h[:, j0 + 1: j1]) / 2
         hbary[hbary <= eps] = -1
         ub = np.where(hbary[1: Nx - 1, :] > eps,
                       (u0[1: Nx - 1, j0: j1 - 1] + u0[2: Nx, j0: j1 - 1] + u0[1: Nx - 1, j0 + 1: j1] + u0[2: Nx, j0 + 1: j1]) / 4, 0)
-        if linearity != 'linear':
+        if linearity.lower() != 'linear':
             qb1y = wety * (q[:, j0: j1 - 1] + q[:, j0 + 1: j1]) / 2
             qb2y = wety * (q[:, j0 + 1: j1] + q[:, j0 + 2: j1 + 1]) / 2
             v_1y = wety * ((qb1y > 0) * v0[:, j0: j1 - 1] + (qb1y < 0) * v0[:, j0 + 1: j1])
@@ -247,15 +278,36 @@ def swe2D(bathymetry, t, initial_condition=None, boundary_condition=None, i0=1, 
         Ry = np.where((hbary[1: Nx - 1, :] > eps),
             1 + bathymetry.cf_y[1: Nx - 1, j0 + 1: j1]*dt*np.sqrt((ub)**2 + (v0[1: Nx - 1, j0 + 1: j1])**2) / hbary[1: Nx - 1, :], 1
         )
-        v1[1: Nx - 1, j0 + 1: j1] = wety[1: Nx - 1, :] * (v0[1: Nx - 1, j0 + 1: j1] - g * S2 * (e1[1: Nx - 1, j0 + 1: j1] - e1[1: Nx - 1, j0: j1 - 1]) - S2 * vvy[1: Nx - 1, :] - S1 * uvx) / Ry
+        sfy = np.where(hbary[1: Nx - 1, :] > eps,
+            g * k**2 * np.sqrt(v0[1: Nx - 1, j0 + 1: j1]**2 + ((u0[1: Nx - 1, j0: j1 - 1] + u0[1: Nx - 1, j0 + 1: j1] + u0[2: Nx, j0: j0 - 1] + u0[2: Nx, j0 + 1: j1]) / 4)**2) / ((hbary[1: Nx - 1, :]**4)**(1/3)), 0)
+        v1[1: Nx - 1, j0 + 1: j1] = wety[1: Nx - 1, :] * (v0[1: Nx - 1, j0 + 1: j1] - g * S2 * (e1[1: Nx - 1, j0 + 1: j1] - e1[1: Nx - 1, j0: j1 - 1]) - S2 * vvy[1: Nx - 1, :] - S1 * uvx) / (Ry * (1+dt*sfy))
         v1[0, j0 + 1: j1] = wety[0, :] * (v0[0, j0 + 1: j1] - g * S2 * (e1[0, j0 + 1: j1] - e1[0, j0: j1 - 1]) - S2 * vvy[0, :])
         v1[-1, j0 + 1: j1] = wety[-1, :] * (v0[-1, j0 + 1: j1] - g * S2 * (e1[-1, j0 + 1: j1] - e1[-1, j0: j1 - 1]) - S2 * vvy[-1, :])
         if j0 == 1:
             v1[:, j0] = v0[:, j1] - g * S2 * (e1[:, j0] - e1[:, j0 - 1])
         if j1 == Ny - 1:
             v1[:, j1] = v0[:, j1] - g * S2 * (e1[:, j1] - e1[:, j1 - 1])
+
+        if 'saint-venant-exner' in linearity.lower():
+            # calculate z(x, y, t_{n + 1})
+            qsx = np.zeros((Nx + 1, Ny))
+            qsx[1: Nx, 1: Ny - 1] = ag * (u1[1:Nx, 1: Ny - 1]**2 + ((v1[0: Nx - 1, 1: Ny - 1] + v1[1: Nx, 1: Ny - 1] + v1[0: Nx - 1, 2: Ny] + v1[1: Nx, 2: Ny]) / 4)**2) * u1[1: Nx, 1: Ny - 1]
+            qsx[0, 1: Ny - 1] = ag * (u1[0, 1: Ny - 1]**2) * u1[0, 1: Ny - 1]
+            qsx[Nx, 1: Ny - 1] = ag * (u1[Nx, 1: Ny - 1]**2) * u1[Nx, 1: Ny - 1]
+            qsx[:, 0] = 0
+            qsx[:, Ny - 1] = 0
+
+            qsy = np.zeros((Nx, Ny + 1))
+            qsy[1: Nx - 1, 1: Ny] = ag * (v1[1:Nx - 1, 1: Ny]**2 + ((u1[1: Nx - 1, 0: Ny - 1] + u1[1: Nx - 1, 1: Ny] + u1[2: Nx, 0: Ny - 1] + u1[2: Nx, 1: Ny]) / 4)**2) * v1[1: Nx - 1, 1: Ny]
+            qsy[1: Nx - 1, 0] = ag * (v1[1:Nx - 1, 0]**2) * v1[1: Nx - 1, 0]
+            qsy[1: Nx - 1, Ny] = ag * (v1[1:Nx - 1, Ny]**2) * v1[1: Nx - 1, Ny]
+            qsy[0, :] = 0
+            qsy[Nx - 1, :] = 0
+            
+            z1[:, :] = z0[:, :] - zeta*S1 * (qsx[1: Nx + 1, :] - qsx[0: Nx, :]) - zeta*S2 * (qsy[:, 1: Ny + 1] - qsy[:, 0: Ny])
         
-    return e, u, v
+    print(zeta, k, ag)
+    return e, u, v, z
 
 
 def _upwind1D(d, e0, u0, hx, q, linearity='linear', transpose=False):
@@ -274,7 +326,7 @@ def _upwind1D(d, e0, u0, hx, q, linearity='linear', transpose=False):
     idxZero = u0[1: Nx] == 0
 
     # upwind
-    if linearity != 'linear':
+    if linearity.lower() != 'linear':
         hx[1: Nx][idxPos] = d[0: Nx - 1][idxPos] + e0[0: Nx - 1][idxPos]
         hx[1: Nx][idxNeg] = d[1: Nx][idxNeg] + e0[1: Nx][idxNeg]
         hx[1: Nx][idxZero] = (
@@ -319,7 +371,7 @@ def _upwind2D(d, e0, u0, hx, q, linearity='linear', transpose=False):
     idxZero = u0[1: Nx, :] == 0
 
     # upwind
-    if linearity != 'linear':
+    if linearity.lower() != 'linear':
         hx[1: Nx, :][idxPos] = d[0: Nx - 1, :][idxPos] + e0[0: Nx - 1, :][idxPos]
         hx[1: Nx, :][idxNeg] = d[1: Nx, :][idxNeg] + e0[1: Nx, :][idxNeg]
         hx[1: Nx, :][idxZero] = (

@@ -9,16 +9,15 @@ class Bathymetry1D:
         self._dx = np.mean(x[1:] - x[: -1])
 
         self.porous = False
+        self.cf = np.zeros(self.x.shape)
     
     @property
     def dx(self):
         self._dx = np.mean(self.x[1:] - self.x[: -1])
         return self._dx
 
-    def set_porous(self, porous0, porous1, cf=0):
+    def set_porous(self, cf):
         self.porous = True
-        self.porous0 = porous0
-        self.porous1 = porous1
         self.cf = cf
 
 
