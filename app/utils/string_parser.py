@@ -87,6 +87,8 @@ class NumericStringParser:
                    "floor": np.floor,
                    "ceil": np.ceil,
                    "sign": np.sign,
+                   "maximum": np.maximum,
+                   "minimum": np.minimum,
                    "H": np.heaviside}
 
     def pushFirst(self, strg, loc, toks):

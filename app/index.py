@@ -383,7 +383,7 @@ def run_swe(_, create_bathymetry, dimension, eta_initial, u_initial, v_initial,
             for bound in ['left', 'right']:
                 if store_dict[bound + '_contents']:
                     bc[bound] = parse_contents(store_dict[bound + '_contents'])
-                    t, bc[bound] = interpolate_input_wave(bc[bound], dt)
+                    t, bc[bound] = interpolate_input_wave(bc[bound], dt, store_dict['t_min'], store_dict['t_max'])
                 else:
                     t = np.arange(store_dict['t_min'], store_dict['t_max'], dt)
                     bc[bound] = parse_formula({'t': t, 'pi': np.pi,

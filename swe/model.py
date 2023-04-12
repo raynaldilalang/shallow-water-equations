@@ -54,7 +54,6 @@ def swe1D(bathymetry, t, initial_condition=None, boundary_condition=None,
     else:
         e[-1, :] = boundary_condition['right']
         e[-1, :] = boundary_condition['right']
-        
 
     loop = range(Nt - 1)
     if verbose == 1:
