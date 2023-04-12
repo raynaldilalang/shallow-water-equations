@@ -2,13 +2,12 @@ import dash
 from dash import html
 from dash import dcc
 import dash_bootstrap_components as dbc
-
-if 'temp' not in os.listdir():
-    os.mkdir('temp')
-
 import os
 import argparse
 
+if 'temp' not in os.listdir():
+    print(os.listdir())
+    os.mkdir('temp')
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
 
