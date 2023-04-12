@@ -1,1 +1,1 @@
-web: python -m app
+web: web: gunicorn app.app:server --timeout 600

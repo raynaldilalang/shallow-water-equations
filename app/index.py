@@ -23,12 +23,12 @@ from .utils.characters import Delta, eta
 from .home import layout as home_layout
 from .main_app import layout as main_app_layout
 
-server = app.server
+# server = app.server
 
-app.layout = html.Div([
-    dcc.Location(id="url", refresh=False),
-    html.Div(id="page-content")
-])
+# app.layout = html.Div([
+#     dcc.Location(id="url", refresh=False),
+#     html.Div(id="page-content")
+# ])
 
 
 @app.callback(Output("page-content", "children"),
