@@ -3,7 +3,8 @@ from dash import html
 from dash import dcc
 import dash_bootstrap_components as dbc
 
-# from . import index
+if 'temp' not in os.listdir():
+    os.mkdir('temp')
 
 import os
 import argparse
@@ -33,6 +34,4 @@ PORT = int(os.getenv('PORT', '8000'))
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if 'temp' not in os.listdir():
-        os.mkdir('temp')
     app.run_server(host=HOST, port=PORT, debug=args.debug, use_reloader=args.reload)
